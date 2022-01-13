@@ -27,6 +27,10 @@ interface ArbitrumInbox  {
 
 }
 
+interface OVMLayer1Messenger{
+    function xDomainMessageSender() external view returns (address);
+}
+
 contract BondingContract{
     address sourceAddress;
     address destinationAddress;
@@ -35,10 +39,12 @@ contract BondingContract{
     uint256 maxGas = 100000;
     uint256 gasPriceBid = 10;
     bytes4 sourceSelector = bytes4(0x81b24111);
-    constructor(address sourceContractAddress, address destinationContractAddress, address arbitrumInbox){
+    OVMLayer1Messenger ovmMessenger;
+    constructor(address sourceContractAddress, address destinationContractAddress, address arbitrumInbox, address ovmMessengerAddress){
         sourceAddress = sourceContractAddress;
         destinationAddress = destinationContractAddress;
         messenger = ArbitrumInbox(arbitrumInbox);
+        ovmMessenger = OVMLayer1Messenger(ovmMessengerAddress);
         owner = msg.sender;
     }
     modifier onlyOwner(){
@@ -62,7 +68,11 @@ contract BondingContract{
         _;
     }
 
-    function passData(bytes32[] memory rewardHashList) public  payable {
+    function passData(bytes32[] memory rewardHashList) public fromDestinationContract {
+        require(
+            msg.sender == address(ovmMessenger)
+            && ovmMessenger.xDomainMessageSender() == destinationAddress
+        );
         bytes memory data = abi.encodeWithSelector(
             sourceSelector,
             rewardHashList
