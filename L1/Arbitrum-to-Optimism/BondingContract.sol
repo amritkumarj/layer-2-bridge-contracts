@@ -61,9 +61,13 @@ contract BondingContract{
     function updateInboxAddress(address inboxAddress) public onlyOwner{
         messenger = ArbitrumInbox(inboxAddress);
     }
+    function updateOVMMessengerAddress(address ovmAddress) public onlyOwner{
+        ovmMessenger = OVMLayer1Messenger(ovmAddress);
+    }
     function updateSourceSelector(bytes4 selector) public onlyOwner{
         sourceSelector = selector;
     }
+
     modifier fromDestinationContract(){
         _;
     }
