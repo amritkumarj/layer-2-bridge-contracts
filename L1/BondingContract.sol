@@ -51,8 +51,12 @@ contract BondingContract{
     function updateSourceAddress(address SourceAddress) public onlyOwner{
         sourceAddress = SourceAddress;
     }
+
     function updateInboxAddress(address inboxAddress) public onlyOwner{
         messenger = ArbitrumInbox(inboxAddress);
+    }
+    function updateSourceSelector(bytes4 selector) public onlyOwner{
+        sourceSelector = selector;
     }
     modifier fromDestinationContract(){
         _;

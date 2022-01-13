@@ -1,0 +1,1 @@
+Prototype Implementaion of Layer 2 bridge proposal as desribed by Vitalik here https://notes.ethereum.org/@vbuterin/cross_layer_2_bridges#Alternative-proposal
