@@ -108,7 +108,6 @@ contract Destination is IDestination{
 
         if(transferData.tokenAddress == ETH_ADDRESS){
             require(msg.value + tx.gasprice == amountMinusLPFee);
-            payable(transferData.destination).transfer(amountMinusLPFee);
 
             claimedTransferHashes[transferHash] = true;
             RewardData memory rewardData = RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
@@ -117,21 +116,16 @@ contract Destination is IDestination{
             if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
                 rewardHashOnionHistoryList.push(rewardHashOnion);
             }
+
+            payable(transferData.destination).transfer(amountMinusLPFee);
+
             emit newTransfer(transferData);
 
             return;
             
         }else{
-            IERC20(transferData.tokenAddress).safeTransferFrom(
-                msg.sender,
-                address(this),
-                amountMinusLPFee
-            );
-            IERC20(transferData.tokenAddress).safeTransfer(
-                transferData.destination,
-                amountMinusLPFee
-            );
-
+           
+           
             claimedTransferHashes[transferHash] = true;
             RewardData memory rewardData = RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
             rewardHashOnion = keccak256(abi.encode(rewardHashOnion,keccak256(abi.encode(rewardData))));
@@ -139,6 +133,10 @@ contract Destination is IDestination{
             if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
                 rewardHashOnionHistoryList.push(rewardHashOnion);
             }    
+            IERC20(transferData.tokenAddress).safeTransfer(
+                transferData.destination,
+                amountMinusLPFee
+            );
 
             emit newTransfer(transferData);
 

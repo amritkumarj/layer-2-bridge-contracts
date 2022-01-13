@@ -113,9 +113,7 @@ contract Source is ISource{
     function declareNewHashChainHead(bytes32[] memory newOnionHashes) external override fromL1Contract{
         for (uint256 i = 0; i < newOnionHashes.length; i++) {
             bytes32 newOnionHash = newOnionHashes[i];
-            if(!knownHashOnions[newOnionHash]){
                 knownHashOnions[newOnionHash] = true;
-            }
         }
     }
 
