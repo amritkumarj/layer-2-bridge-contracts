@@ -69,6 +69,10 @@ contract BondingContract{
     }
 
     modifier fromDestinationContract(){
+        require(
+            msg.sender == address(ovmMessenger)
+            && ovmMessenger.xDomainMessageSender() == destinationAddress
+        );
         _;
     }
 
