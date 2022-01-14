@@ -3,7 +3,7 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../utils/DataType.sol"
+import "../utils/DataType.sol";
 interface ISource{
     
 
@@ -13,7 +13,7 @@ interface ISource{
     function transfer(DataType.TransferData memory transferData) external payable;
 
     function declareNewHashChainHead(bytes32[] memory newOnionHashes) external;
-    function processClaims(DataType.TransferData[] memory rewardDataList) external;
+    function processClaims(DataType.RewardData[] memory rewardDataList) external;
     function refundFunction(DataType.TransferData memory transferData) external;
 }
 contract Source is ISource{
@@ -99,10 +99,10 @@ contract Source is ISource{
         }
     }
 
-    function processClaims(DataType.TransferData[] memory rewardDataList) external override{
+    function processClaims(DataType.RewardData[] memory rewardDataList) external override{
         bytes32 tempProcessedRewardHashOnion = processedRewardHashOnion;
         for (uint256 i = 0; i < rewardDataList.length; i++) {
-            DataType.TransferData memory rewardData = rewardDataList[i];
+            DataType.RewardData memory rewardData = rewardDataList[i];
             tempProcessedRewardHashOnion = keccak256(abi.encode(tempProcessedRewardHashOnion,keccak256(abi.encode(rewardData))));
         }
 
@@ -112,7 +112,7 @@ contract Source is ISource{
 
         for (uint256 i = 0; i < rewardDataList.length; i++) {
 
-            DataType.TransferData memory rewardData = rewardDataList[i];
+            DataType.RewardData memory rewardData = rewardDataList[i];
             if(validTransferHashes[rewardData.transferHash] == PENDING_TRANSACTION){
 
                 validTransferHashes[rewardData.transferHash] = COMPLETED_TRANSACTION;

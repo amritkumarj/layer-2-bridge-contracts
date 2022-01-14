@@ -3,7 +3,7 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../utils/DataType.sol"
+import "../utils/DataType.sol";
 
 interface IDestination{
 
@@ -92,7 +92,7 @@ contract Destination is IDestination{
             require(msg.value + tx.gasprice == amountMinusLPFee);
 
             claimedTransferHashes[transferHash] = true;
-            DataType.DataType.TransferData memory rewardData = DataType.DataType.TransferData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
+            DataType.RewardData memory rewardData = DataType.RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
             rewardHashOnion = keccak256(abi.encode(rewardHashOnion,keccak256(abi.encode(rewardData))));
             transferCount += 1;
             if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
@@ -109,7 +109,7 @@ contract Destination is IDestination{
            
            
             claimedTransferHashes[transferHash] = true;
-            DataType.DataType.TransferData memory rewardData = DataType.DataType.TransferData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
+            DataType.RewardData memory rewardData = DataType.RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
             rewardHashOnion = keccak256(abi.encode(rewardHashOnion,keccak256(abi.encode(rewardData))));
             transferCount += 1;
             if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
