@@ -107,8 +107,13 @@ contract Destination is IDestination{
             
         }else{
            
-           
+           IERC20(transferData.tokenAddress).safeTransferFrom(
+                msg.sender,
+                address(this),
+                amountMinusLPFee
+            );
             claimedTransferHashes[transferHash] = true;
+
             DataType.RewardData memory rewardData = DataType.RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
             rewardHashOnion = keccak256(abi.encode(rewardHashOnion,keccak256(abi.encode(rewardData))));
             transferCount += 1;
