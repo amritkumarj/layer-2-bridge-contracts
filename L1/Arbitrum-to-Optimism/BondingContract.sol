@@ -36,7 +36,7 @@ contract BondingContract{
     address destinationAddress;
     address owner;
     ArbitrumInbox messenger;
-    uint256 maxGas = 100000;
+    uint256 maxGas = 3000000;
     uint256 gasPriceBid = 10;
     bytes4 sourceSelector = bytes4(0x81b24111);
     OVMLayer1Messenger ovmMessenger;
@@ -77,10 +77,7 @@ contract BondingContract{
     }
 
     function passData(bytes32[] memory rewardHashList) public fromDestinationContract {
-        require(
-            msg.sender == address(ovmMessenger)
-            && ovmMessenger.xDomainMessageSender() == destinationAddress
-        );
+      
         bytes memory data = abi.encodeWithSelector(
             sourceSelector,
             rewardHashList
