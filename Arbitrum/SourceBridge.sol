@@ -3,35 +3,18 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
+import "../utils/DataType.sol"
 interface ISource{
-    struct TransferData{
-        address tokenAddress;
-        address destination;
-        address sender;
-        uint256 amount;
-        uint256 fee;
-        uint256 startTime;
-        uint256 feeRampup;
-        uint256 nonce;
-
-    }
-    struct RewardData{
-        bytes32 transferHash;
-        address tokenAddress;
-        address claimer;
-        uint256 amount;
-
-    }
+    
 
     event newTransfer(
-        TransferData transferData
+        DataType.TransferData transferData
     );
-    function transfer(TransferData memory transferData) external payable;
+    function transfer(DataType.TransferData memory transferData) external payable;
 
     function declareNewHashChainHead(bytes32[] memory newOnionHashes) external;
-    function processClaims(RewardData[] memory rewardDataList) external;
-    function refundFunction(TransferData memory transferData) external;
+    function processClaims(DataType.TransferData[] memory rewardDataList) external;
+    function refundFunction(DataType.TransferData memory transferData) external;
 }
 contract Source is ISource{
     uint8 CONTRACT_FEE_BASIS_POINTS = 5;
@@ -77,7 +60,7 @@ contract Source is ISource{
      function updateL1Address(address L1Address) public onlyOwner{
         L1ContractAddress = L1Address;
     }
-    function transfer(TransferData memory transferData) external payable override {
+    function transfer(DataType.TransferData memory transferData) external payable override {
         uint256 amountPlusFee = (transferData.amount * (10000 + CONTRACT_FEE_BASIS_POINTS)) / 10000; 
         require(amountPlusFee >= 0.001 ether);
         transferData.startTime = block.timestamp;
@@ -116,10 +99,10 @@ contract Source is ISource{
         }
     }
 
-    function processClaims(RewardData[] memory rewardDataList) external override{
+    function processClaims(DataType.TransferData[] memory rewardDataList) external override{
         bytes32 tempProcessedRewardHashOnion = processedRewardHashOnion;
         for (uint256 i = 0; i < rewardDataList.length; i++) {
-            RewardData memory rewardData = rewardDataList[i];
+            DataType.TransferData memory rewardData = rewardDataList[i];
             tempProcessedRewardHashOnion = keccak256(abi.encode(tempProcessedRewardHashOnion,keccak256(abi.encode(rewardData))));
         }
 
@@ -129,7 +112,7 @@ contract Source is ISource{
 
         for (uint256 i = 0; i < rewardDataList.length; i++) {
 
-            RewardData memory rewardData = rewardDataList[i];
+            DataType.TransferData memory rewardData = rewardDataList[i];
             if(validTransferHashes[rewardData.transferHash] == PENDING_TRANSACTION){
 
                 validTransferHashes[rewardData.transferHash] = COMPLETED_TRANSACTION;
@@ -149,7 +132,7 @@ contract Source is ISource{
         }
     }
 
-    function refundFunction(TransferData memory transferData) external override{
+    function refundFunction(DataType.TransferData memory transferData) external override{
         bytes32 transferHash = keccak256(abi.encode(transferData));
         require(validTransferHashes[transferHash] == PENDING_TRANSACTION ,"Transaction Already complete");
         require(transferData.startTime + (MINIMUM_REFUND_DAYS * 1 days) > block.timestamp,"Refund window not started");

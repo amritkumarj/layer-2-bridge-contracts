@@ -3,31 +3,14 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../utils/DataType.sol"
 
 interface IDestination{
-    struct TransferData{
-        address tokenAddress;
-        address destination;
-        address sender;
-        uint256 amount;
-        uint256 fee;
-        uint256 startTime;
-        uint256 feeRampup;
-        uint256 nonce;
-
-    }
-    
-    struct RewardData{
-        bytes32 transferHash;
-        address tokenAddress;
-        address claimer;
-        uint256 amount;
-    }
 
     event newTransfer(
-        TransferData transferData
+        DataType.TransferData transferData
     );
-    function claim(TransferData memory transferData) external payable;
+    function claim(DataType.TransferData memory transferData) external payable;
 
     function getLPFee(uint256 startTime, uint256 fee, uint256 feeRampup) external view returns(uint256);
 
@@ -98,7 +81,7 @@ contract Destination is IDestination{
     }
 
     
-    function claim(TransferData memory transferData) external payable override {
+    function claim(DataType.TransferData memory transferData) external payable override {
         uint256 amountMinusLPFee = transferData.amount - getLPFee(transferData.startTime,transferData.fee,transferData.feeRampup); 
         require(amountMinusLPFee >= 0.001 ether);
         bytes32 transferHash = keccak256(abi.encode(transferData));
@@ -109,7 +92,7 @@ contract Destination is IDestination{
             require(msg.value + tx.gasprice == amountMinusLPFee);
 
             claimedTransferHashes[transferHash] = true;
-            RewardData memory rewardData = RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
+            DataType.DataType.TransferData memory rewardData = DataType.DataType.TransferData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
             rewardHashOnion = keccak256(abi.encode(rewardHashOnion,keccak256(abi.encode(rewardData))));
             transferCount += 1;
             if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
@@ -126,7 +109,7 @@ contract Destination is IDestination{
            
            
             claimedTransferHashes[transferHash] = true;
-            RewardData memory rewardData = RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
+            DataType.DataType.TransferData memory rewardData = DataType.DataType.TransferData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
             rewardHashOnion = keccak256(abi.encode(rewardHashOnion,keccak256(abi.encode(rewardData))));
             transferCount += 1;
             if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
