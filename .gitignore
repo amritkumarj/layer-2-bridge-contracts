@@ -1,0 +1,6 @@
+common/artifacts
+Arbitrum/artifacts
+L1/Arbitrum-to-Optimism/artifacts
+Optimism/artifacts
+utils/artifacts
+.deps

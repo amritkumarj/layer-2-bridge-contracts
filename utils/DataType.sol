@@ -18,6 +18,5 @@ library DataType {
         address tokenAddress;
         address claimer;
         uint256 amount;
-
     }
 }
