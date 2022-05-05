@@ -46,7 +46,10 @@ contract Source is ISource{
     uint160 constant offset = uint160(0x1111000000000000000000000000000000001111);
     
     bytes32 destinationStateRoot;
+
     bytes32 DESTINATION_ADDRESS_HASH;
+
+    // TODO - ADD REWARD ONION STORAGE HASH
     bytes32 REWARD_ONION_STORAGE_HASH;
     function undoL1ToL2Alias(address l2Address) internal pure returns (address l1Address) {
         l1Address = address(uint160(l2Address) - offset);
