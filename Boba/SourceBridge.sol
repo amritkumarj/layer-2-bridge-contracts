@@ -2,8 +2,6 @@
 
 pragma solidity 0.8.7;
 
-
-
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../utils/DataType.sol";
 // import "../common/Patricia.sol";
@@ -49,11 +47,6 @@ contract Source is ISource{
 
     bytes32 DESTINATION_ADDRESS_HASH;
 
-    // TODO - ADD REWARD ONION STORAGE HASH
-    bytes32 REWARD_ONION_STORAGE_HASH;
-    function undoL1ToL2Alias(address l2Address) internal pure returns (address l1Address) {
-        l1Address = address(uint160(l2Address) - offset);
-    }
 
     modifier fromL1Contract(){
         require(
@@ -119,24 +112,11 @@ contract Source is ISource{
         destinationStateRoot = stateRoot;
     } 
 
-    function verifyChainHead(bytes memory accountProof, bytes memory storageProof) external override{
-        
-        Verifier.Account memory desinationAccountPool = Verifier.extractAccountFromProof(
-            DESTINATION_ADDRESS_HASH,
-           destinationStateRoot,
-            RLPReader.toList(RLPReader.toRlpItem(accountProof))
-        );
-
-        require(desinationAccountPool.exists, "Desitnation Account not found");
-
-        Verifier.SlotValue memory rewardOnionSlot = Verifier.extractSlotValueFromProof(
-            REWARD_ONION_STORAGE_HASH,
-            desinationAccountPool.storageRoot,
-            RLPReader.toList(RLPReader.toRlpItem(storageProof))
-        );
-
-        require(rewardOnionSlot.exists, "Reward Onion value not found");
-        knownHashOnions[bytes32(rewardOnionSlot.value)] = true;
+    function declareNewHashChainHead(bytes32[] memory newOnionHashes) external override fromL1Contract{
+        for (uint256 i = 0; i < newOnionHashes.length; i++) {
+            bytes32 newOnionHash = newOnionHashes[i];
+            knownHashOnions[newOnionHash] = true;
+        }
     }
 
     function processClaims(DataType.RewardData[] memory rewardDataList) external override{

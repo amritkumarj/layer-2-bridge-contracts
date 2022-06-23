@@ -98,7 +98,6 @@ contract Destination is IDestination{
             if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
                 rewardHashOnionHistoryList.push(rewardHashOnion);
             }
-
             payable(transferData.destination).transfer(amountMinusLPFee);
 
             emit newTransfer(transferData);
