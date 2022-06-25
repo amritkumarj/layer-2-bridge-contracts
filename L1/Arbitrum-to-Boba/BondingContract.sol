@@ -22,11 +22,11 @@ contract BondingContract{
     address destinationAddress;
     address owner;
     uint32 maxGas = 1000000;
-    bytes4 sourceSelector = bytes4(0xacaf80a1);
+    bytes4 sourceSelector = bytes4(0x81b24111);
     L1CrossDomainManager messenger;
 
     IOutbox outbox;
-    constructor(address sourceContractAddress, address destinationContractAddress,  address arbOutbox,address l1Messenger){
+    constructor(address sourceContractAddress, address destinationContractAddress,  address arbOutbox, address l1Messenger){
         sourceAddress = sourceContractAddress;
         destinationAddress = destinationContractAddress;
         outbox = IOutbox(arbOutbox);
@@ -50,7 +50,7 @@ contract BondingContract{
         outbox = IOutbox(arbOutbox);
     }
 
-    function updateOutbox(address l1Messenger) public onlyOwner{
+    function updateMessenger(address l1Messenger) public onlyOwner{
         messenger = L1CrossDomainManager(l1Messenger);
     }
 
@@ -65,7 +65,8 @@ contract BondingContract{
         );
         _;
     }
-    function passData(bytes32[] memory rewardHashList) public fromDestinationContract payable {
+    
+    function passData(bytes32[] memory rewardHashList) public fromDestinationContract{
         
         messenger.sendMessage(
             sourceAddress,

@@ -7,7 +7,7 @@ import "../utils/DataType.sol";
 
 interface IDestination{
 
-    event newTransfer(
+    event NewTransfer(
         DataType.TransferData transferData
     );
     function claim(DataType.TransferData memory transferData) external payable;
@@ -18,13 +18,9 @@ interface IDestination{
 
 }
 
-interface CrossDomainMessenger{
+interface ArbSys{
 
-    function sendMessage(
-        address _target,
-        bytes memory _message,
-        uint32 _gasLimit
-    ) external ;
+    function sendTxToL1(address destination, bytes calldata calldataForL1) external payable returns(uint);
 }
 
 contract Destination is IDestination{
@@ -32,9 +28,13 @@ contract Destination is IDestination{
 
     uint8 public constant MINIMUM_REFUND_DAYS = 8;
 
-    uint8 public constant MAX_TRANSACTION_PER_ONION = 100;
+    uint8 public  MAX_TRANSACTION_PER_ONION = 100;
 
     address constant ETH_ADDRESS = address(0);
+
+    event TransferRewardHashOnion(
+        uint256 index
+    );
 
     mapping(bytes32 => bool) claimedTransferHashes;
     bytes32[] rewardHashOnionHistoryList;
@@ -46,15 +46,16 @@ contract Destination is IDestination{
 
     address L1ContractAddress;
     bytes4 L1selector = bytes4(0x65a622cd);
+    uint256 MINIMUM_TRANSFER = 0.001 ether;
 
-    CrossDomainMessenger public crossDomainMessenger;
-    constructor(address L1Address, address messengerAddress){
+    ArbSys public arbSys;
+    constructor(address L1Address, address arbSysAddress){
         rewardHashOnion = 0;
         transferCount = 0;
         lastSourceHashPosition = 0;
         owner = msg.sender;
         L1ContractAddress = L1Address;
-        crossDomainMessenger = CrossDomainMessenger(messengerAddress);
+        arbSys = ArbSys(arbSysAddress);
     }
 
     modifier onlyOwner(){
@@ -62,11 +63,15 @@ contract Destination is IDestination{
         _;
     }
 
-    function changeMessenger(address messengerAddress) public onlyOwner{
-        crossDomainMessenger = CrossDomainMessenger(messengerAddress);
+    function changeMessenger(address arbSysAddress) public onlyOwner{
+        arbSys = ArbSys(arbSysAddress);
     }
     function updateL1Address(address L1Address) public onlyOwner{
         L1ContractAddress = L1Address;
+    }
+
+    function updateMaxTransactions(uint8 newMaxTransaction) public onlyOwner{
+        MAX_TRANSACTION_PER_ONION = newMaxTransaction;
     }
 
     function getLPFee(uint256 startTime, uint256 fee, uint256 feeRampup) public view override returns (uint256) {
@@ -75,37 +80,33 @@ contract Destination is IDestination{
             return 0;
         }else if(currentTime >= startTime + feeRampup){
             return fee;
-        }else {
-            return fee * (currentTime - startTime) / feeRampup;
+        } else {
+            return (fee * (100 + (feeRampup - (currentTime - startTime)))) / 100;
         }
     }
 
     
     function claim(DataType.TransferData memory transferData) external payable override {
         uint256 amountMinusLPFee = transferData.amount - getLPFee(transferData.startTime,transferData.fee,transferData.feeRampup); 
-        require(amountMinusLPFee >= 0.001 ether);
+        require(amountMinusLPFee >= MINIMUM_TRANSFER);
         bytes32 transferHash = keccak256(abi.encode(transferData));
         require(!claimedTransferHashes[transferHash],"Already Claimed");
 
-
         if(transferData.tokenAddress == ETH_ADDRESS){
-            require(msg.value + tx.gasprice == amountMinusLPFee);
+            require(msg.value == amountMinusLPFee);
 
             claimedTransferHashes[transferHash] = true;
             DataType.RewardData memory rewardData = DataType.RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
             rewardHashOnion = keccak256(abi.encode(rewardHashOnion,keccak256(abi.encode(rewardData))));
+            
+            payable(transferData.destination).transfer(amountMinusLPFee);
             transferCount += 1;
             if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
                 rewardHashOnionHistoryList.push(rewardHashOnion);
             }
-            payable(transferData.destination).transfer(amountMinusLPFee);
+            emit NewTransfer(transferData);
 
-            emit newTransfer(transferData);
-
-            return;
-            
         }else{
-           
             IERC20(transferData.tokenAddress).safeTransferFrom(
                 msg.sender,
                 address(this),
@@ -115,18 +116,17 @@ contract Destination is IDestination{
 
             DataType.RewardData memory rewardData = DataType.RewardData(transferHash,transferData.tokenAddress,msg.sender,transferData.amount);
             rewardHashOnion = keccak256(abi.encode(rewardHashOnion,keccak256(abi.encode(rewardData))));
-            transferCount += 1;
-            if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
-                rewardHashOnionHistoryList.push(rewardHashOnion);
-            }    
+                
             IERC20(transferData.tokenAddress).safeTransfer(
                 transferData.destination,
                 amountMinusLPFee
             );
 
-            emit newTransfer(transferData);
-
-            return;
+            transferCount += 1;
+            if(transferCount % MAX_TRANSACTION_PER_ONION == 0){
+                rewardHashOnionHistoryList.push(rewardHashOnion);
+            }
+            emit NewTransfer(transferData);
         }
     }
   
@@ -140,9 +140,10 @@ contract Destination is IDestination{
             rewardHashOnions[i - lastSourceHashPosition] = rewardHashOnionHistoryList[i];
         }
         rewardHashOnions[onionLength-1] = rewardHashOnion;
-        
+
         bytes memory message = abi.encodeWithSelector(L1selector, rewardHashOnions);
-        crossDomainMessenger.sendMessage(L1ContractAddress,message,MAX_GAS);
+        uint256 id = arbSys.sendTxToL1(L1ContractAddress,message);
+        emit TransferRewardHashOnion(id);
         lastSourceHashPosition = currentListLength;
     }
 

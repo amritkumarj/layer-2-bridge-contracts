@@ -4,20 +4,18 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../utils/DataType.sol";
-// import "../common/Patricia.sol";
-import {StateProofVerifier as Verifier} from "../common/StateProofVerifier.sol";
-import {RLPReader} from "../common/RLPReader.sol";
+
 interface ISource{
 
-    event newTransfer(
+    event NewTransfer(
         DataType.TransferData transferData
     );
-    function transfer(DataType.TransferData memory transferData) external payable;
+    function transfer(address tokenAddress, address destination, uint256 amount, uint256 feeRampup) external payable;
 
     function processClaims(DataType.RewardData[] memory rewardDataList) external;
     function refundFunction(DataType.TransferData memory transferData) external;
-    function updateStateRoot(bytes32 stateRoot) external;
-    function verifyChainHead(bytes memory accountProof, bytes memory storageProof) external;
+    function declareNewHashChainHead(bytes32[] memory newOnionHashes) external;
+    function getLPFees(uint256 amount) external view returns(uint256 fee,uint256 amountPlusFee);
 }
 interface OVMLayer2Messenger{
     function xDomainMessageSender() external view returns (address);
@@ -32,7 +30,7 @@ contract Source is ISource{
     uint8 public constant MINIMUM_REFUND_DAYS = 8;
 
     mapping(bytes32 => uint8) validTransferHashes;
-    mapping(bytes32 => bool) knownHashOnions;
+    mapping(bytes32 => bool) public knownHashOnions;
 
     bytes32 processedRewardHashOnion;
     address constant ETH_ADDRESS = address(0);
@@ -47,6 +45,8 @@ contract Source is ISource{
 
     bytes32 DESTINATION_ADDRESS_HASH;
 
+    uint256 nonce;
+    uint256 MINIMUM_TRANSFER = 0.001 ether;
 
     modifier fromL1Contract(){
         require(
@@ -62,12 +62,12 @@ contract Source is ISource{
         _;
     }
 
-    constructor(address L1Address, address destinationAddress, address ovmCrossDomaniMessenger){
+    constructor(address L1Address, address ovmCrossDomaniMessenger){
         processedTransferCount = 0;
         processedRewardHashOnion = 0;
+        nonce = 0;
         owner = msg.sender;
         L1ContractAddress = L1Address;
-        DESTINATION_ADDRESS_HASH = keccak256(abi.encodePacked(destinationAddress));
 
         ovmL2CrossDomainMessenger = OVMLayer2Messenger(ovmCrossDomaniMessenger);
     }
@@ -76,41 +76,50 @@ contract Source is ISource{
         L1ContractAddress = L1Address;
     }
 
+    function updateMessenger(address messenger) public onlyOwner{
+        ovmL2CrossDomainMessenger = OVMLayer2Messenger(messenger);
+    }
 
-    function transfer(DataType.TransferData memory transferData) external payable override {
-        uint256 amountPlusFee = (transferData.amount * (10000 + CONTRACT_FEE_BASIS_POINTS)) / 10000; 
-        require(amountPlusFee >= 0.001 ether);
-        transferData.startTime = block.timestamp;
-        transferData.sender = msg.sender;
+    function getLPFees(uint256 amount) public view override returns(uint256 fee,uint256 amountPlusFee){
+         amountPlusFee = (amount * (10000 + CONTRACT_FEE_BASIS_POINTS)) / 10000; 
+         fee = amountPlusFee - amount;
+    }
+    function transfer(address tokenAddress, address destination, uint256 amount, uint256 feeRampup) external payable override {
+         (uint256 fee,uint256 amountPlusFee) = getLPFees(amount);
+        uint256 newNonce = nonce + 1;
+        require(amountPlusFee >= MINIMUM_TRANSFER);
+
+        DataType.TransferData memory transferData = DataType.TransferData(
+            tokenAddress,
+            destination,
+            msg.sender,
+            amountPlusFee,
+            fee,
+            block.timestamp,
+            feeRampup,
+            newNonce
+        );
         bytes32 transferHash = keccak256(abi.encode(transferData));
-
-        if(validTransferHashes[transferHash] != NEW_TRANSACTION){
-            transferData.nonce += 1;
-            transferHash = keccak256(abi.encode(transferData));
-        }
 
         require(validTransferHashes[transferHash] == NEW_TRANSACTION);
         if(transferData.tokenAddress == ETH_ADDRESS){
-            require(msg.value + tx.gasprice == amountPlusFee);
-            emit newTransfer(transferData);
+            require(msg.value == amountPlusFee);
             validTransferHashes[transferHash] = PENDING_TRANSACTION;
-            return;
-            
+            nonce = newNonce;
+            emit NewTransfer(transferData);
         }else{
             IERC20(transferData.tokenAddress).safeTransferFrom(
                 msg.sender,
                 address(this),
                 amountPlusFee
             );
-            emit newTransfer(transferData);
+
             validTransferHashes[transferHash] = PENDING_TRANSACTION;
-            return;
+            nonce = newNonce;
+            emit NewTransfer(transferData);
         }
     }
   
-    function updateStateRoot(bytes32 stateRoot) external override fromL1Contract{
-        destinationStateRoot = stateRoot;
-    } 
 
     function declareNewHashChainHead(bytes32[] memory newOnionHashes) external override fromL1Contract{
         for (uint256 i = 0; i < newOnionHashes.length; i++) {

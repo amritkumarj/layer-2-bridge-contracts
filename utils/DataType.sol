@@ -11,8 +11,8 @@ library DataType {
         uint256 startTime;
         uint256 feeRampup;
         uint256 nonce;
-
     }
+    
     struct RewardData{
         bytes32 transferHash;
         address tokenAddress;
