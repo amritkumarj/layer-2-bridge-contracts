@@ -1,6 +1,3 @@
-common/artifacts
-Arbitrum/artifacts
-L1/Arbitrum-to-Boba/artifacts
-Boba/artifacts
-utils/artifacts
-.deps
+node_modules
+artifacts
+cache
