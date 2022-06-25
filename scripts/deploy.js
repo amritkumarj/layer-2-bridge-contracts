@@ -45,7 +45,6 @@ async function deployBobaArbitrumBridge(){
   ], {initializer: 'initialize',unsafeAllow: ['delegatecall']});
   await bondingContract.deployed()
   console.log("Bonding Contract address: ", bondingContract.address);
-  
 
   await destinationBridge.updateL1Address(bondingContract.address)
   await sourceBridge.updateL1Address(bondingContract.address)
