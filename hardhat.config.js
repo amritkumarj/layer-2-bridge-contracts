@@ -13,7 +13,7 @@ module.exports = {
     hardhat: {
     },
     rinkeby: {
-      url: "https://mainnet.infura.io/v3/4d82bd025208490993c4d94e829018eb",
+      url: "https://rinkeby.infura.io/v3/4d82bd025208490993c4d94e829018eb",
       accounts: [privateKey]
     },
     boba_rinkeby: {
