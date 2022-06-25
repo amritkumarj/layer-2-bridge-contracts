@@ -14,6 +14,7 @@ async function main() {
     await deployBobaArbitrumBridge()
 }
 async function deployBobaArbitrumBridge(){
+  console.log("----Started Deployment----");
 
   hre.changeNetwork(ARBITRUM_NETWORK);
   const DestinationBridge = await hre.ethers.getContractFactory("DestinationBridge");
@@ -48,6 +49,10 @@ async function deployBobaArbitrumBridge(){
 
   await destinationBridge.updateL1Address(bondingContract.address)
   await sourceBridge.updateL1Address(bondingContract.address)
+
+
+  console.log("----Completed Deployment----");
+
 }
 
 main()
