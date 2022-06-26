@@ -1,10 +1,11 @@
 const hre = require("hardhat");
+
 const DUMMY_ADDRESS = "0x0000000000000000000000000000000000000000"
 const ARBSYS_ADDRESS = "0x0000000000000000000000000000000000000064"
 const BOBA_OVM_CROSS_DOMAIN_MESSENGER_L2 = "0x4200000000000000000000000000000000000007"
 const ARB_OUTBOX_L1 = "0x2360A33905dc1c72b12d975d975F42BaBdcef9F3"
+const ARB_BRIDGE = "0x9a28e783c47bbeb813f32b861a431d0776681e95"
 const BOBA_MESSENGER_L1 = "0xF10EEfC14eB5b7885Ea9F7A631a21c7a82cf5D76"
-
 
 const ARBITRUM_NETWORK = "arbitrum_rinkeby"
 const BOBA_NETWORK = "boba_rinkeby"
@@ -42,7 +43,8 @@ async function deployBobaArbitrumBridge(){
     sourceBridge.address,
     destinationBridge.address,
     ARB_OUTBOX_L1,
-    BOBA_MESSENGER_L1
+    BOBA_MESSENGER_L1,
+    ARB_BRIDGE
   ], {initializer: 'initialize',unsafeAllow: ['delegatecall']});
   await bondingContract.deployed()
   console.log("Bonding Contract address: ", bondingContract.address);
